@@ -1,0 +1,50 @@
+.container {
+  display: inline-block;
+  padding: 3px 30px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: 0.3s;
+  margin-right: 20px;
+  border: 0.5px solid #333;
+  position: relative;
+}
+
+.blue {
+  &:hover {
+    color: #108ee9;
+    border-color: #108ee9;
+  }
+}
+
+.blueActive {
+  background-color: #108ee9;
+  border-color: #108ee9;
+  color: white;
+  &:hover {
+    color: white;
+  }
+}
+
+.green {
+  &:hover {
+    color: #87d068;
+    border-color: #87d068;
+  }
+}
+
+.greenActive {
+  background-color: #87d068;
+  border-color: #87d068;
+  color: white;
+  &:hover {
+    color: white;
+  }
+}
+
+.closeBtn {
+  position: absolute;
+  right: 6px;
+  top: 9px;
+  font-size: 14px;
+}
