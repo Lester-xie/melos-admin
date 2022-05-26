@@ -1,11 +1,11 @@
 
 import {useCallback, useEffect, useState, useRef} from "react";
-import {Divider, Input, Button, Table, Space, Popconfirm} from 'antd';
+import {Divider, Input, Button, Table, Space, Popconfirm, Modal} from 'antd';
 
 import styles from "./index.module.scss";
 import {$http, updateToken} from "../../http";
 import Tag from "../../components/Tag";
-import {CloseOutlined, LoadingOutlined} from '@ant-design/icons';
+import {LoadingOutlined} from '@ant-design/icons';
 
 const USERID = '627dd3a6e4591fd54c1a4888'
 
@@ -35,6 +35,11 @@ export default function Resource() {
   const [loading2, setLoading2] = useState(false)
   const [uploadLoading, setUploadLoading] = useState(false)
   const [resourceList, setResourceList] = useState([])
+  const [modalVisible, setModalVisible] = useState(false)
+  const [editValue, setEditValue] = useState('')
+  const [confirmLoading, setConfirmLoading] = useState(false)
+  const [status, setStatus] = useState('parentTag')
+  const [editResource, setEditResource] = useState(null)
 
   const fileInputRef = useRef(null);
 
@@ -109,15 +114,18 @@ export default function Resource() {
     }
   }, [tagList1])
 
-  const onDeleteParentTagClicked = data => {
-    $http.post('label/remove', {_id: data._id}).then(() => {
+  const onDeleteParentTagClicked = () => {
+    $http.post('label/remove', {_id: activeTag1}).then(() => {
       fetchTag1()
+      setActiveTag1('')
     })
   }
 
-  const onDeleteSunTagClicked = data => {
-    $http.post('label/remove', {_id: data._id}).then(() => {
+  const onDeleteSubTagClicked = data => {
+    $http.post('label/remove', {_id: activeTag2}).then(() => {
       fetchTag1()
+      setActiveTag2('')
+      setResourceList([])
     })
   }
 
@@ -170,8 +178,11 @@ export default function Resource() {
       page: 1,
       limit: 100
     }).then(res => {
-      console.log(res)
-      setResourceList(res.result)
+      const data = res?.result.map(item => {
+        item.key = item._id
+        return item
+      })
+      setResourceList(data)
     })
   }
 
@@ -179,6 +190,13 @@ export default function Resource() {
     $http.post('asset/remove', {_id: id}).then(res => {
       fetchResourceList()
     })
+  }
+
+  const onEditResourceName = resource => {
+    setModalVisible(true)
+    setStatus('resourceName')
+    setEditResource(resource)
+    setEditValue(resource.name)
   }
 
   const columns = [
@@ -195,7 +213,7 @@ export default function Resource() {
     {
       title: 'Update Time',
       dataIndex: 'updatedAt',
-      key: 'updateAt',
+      key: 'updatedAt',
       render: (time) => formatTime(time)
     },
     {
@@ -203,6 +221,7 @@ export default function Resource() {
       key: 'action',
       render: (_, record) => (
         <Space size="middle">
+          <Button type="primary" onClick={() => onEditResourceName(record)}>Edit</Button>
           <Popconfirm
             placement="top"
             title="Confirm Delete？"
@@ -223,6 +242,62 @@ export default function Resource() {
     }
   }, [activeTag2])
 
+  const onEditClicked = () => {
+    setModalVisible(true)
+    setStatus('parentTag')
+    tagList1.forEach(item => {
+      if (item._id === activeTag1) {
+        setEditValue(item.name)
+      }
+    })
+  }
+
+  const handleOk = () => {
+    setConfirmLoading(true)
+    if (status === 'parentTag') {
+      $http.post('label/update', {_id: activeTag1, name: editValue})
+        .then(() => {
+          fetchTag1()
+        })
+        .finally(() => {
+          setConfirmLoading(false)
+          setModalVisible(false)
+        })
+    } else if (status === 'subTag') {
+      $http.post('label/update', {_id: activeTag2, name: editValue})
+        .then(() => {
+          fetchTag1()
+        })
+        .finally(() => {
+          setConfirmLoading(false)
+          setModalVisible(false)
+        })
+    } else if (status === 'resourceName') {
+      $http.post('asset/update', {_id: editResource._id, name: editValue})
+        .then(() => {
+          fetchResourceList()
+        })
+        .finally(() => {
+          setConfirmLoading(false)
+          setModalVisible(false)
+        })
+    }
+  }
+
+  const handleCancel = () => {
+    setModalVisible(false)
+  }
+
+  const onEditSubTagClicked = () => {
+    setModalVisible(true)
+    setStatus('subTag')
+    tagList2.forEach(item => {
+      if (item._id === activeTag2) {
+        setEditValue(item.name)
+      }
+    })
+  }
+
   return (
     <div>
       <h3>资源管理</h3>
@@ -240,6 +315,19 @@ export default function Resource() {
               >
                 {loading1 ? <LoadingOutlined /> : 'Add'}
               </Button>
+              <div className={styles.actionWrap}>
+                <Button type="primary" disabled={!activeTag1} onClick={onEditClicked}>Edit</Button>
+                <Popconfirm
+                  placement="top"
+                  title="Confirm Delete？"
+                  onConfirm={onDeleteParentTagClicked}
+                  okText="Yes"
+                  cancelText="No"
+                  disabled={!activeTag1}
+                >
+                  <Button type="danger" disabled={!activeTag1}>Delete</Button>
+                </Popconfirm>
+              </div>
             </div>
             {
               tagList1.map(item => (
@@ -248,7 +336,6 @@ export default function Resource() {
                   key={item.name}
                   onClick={() => onTagClicked(item)}
                   active={activeTag1 === item._id}
-                  onDelete={() => onDeleteParentTagClicked(item)}
                 >
                   {item.name}
                 </Tag>
@@ -269,6 +356,18 @@ export default function Resource() {
                     >
                       {loading2 ? <LoadingOutlined /> : 'Add'}
                     </Button>
+                    <div className={styles.actionWrap}>
+                      <Button type="primary" disabled={!activeTag2} onClick={onEditSubTagClicked}>Edit</Button>
+                      <Popconfirm
+                        placement="top"
+                        title="Confirm Delete？"
+                        onConfirm={onDeleteSubTagClicked}
+                        okText="Yes"
+                        cancelText="No"
+                      >
+                        <Button type="danger" disabled={!activeTag2}>Delete</Button>
+                      </Popconfirm>
+                    </div>
                   </div>
                   {
                     tagList2.map(item => (
@@ -277,7 +376,6 @@ export default function Resource() {
                         key={item.name}
                         onClick={() => onSubTagClicked(item)}
                         active={activeTag2 === item._id}
-                        onDelete={() => onDeleteSunTagClicked(item)}
                       >
                         {item.name}
                       </Tag>
@@ -313,6 +411,17 @@ export default function Resource() {
           </li>
         </ul>
       </div>
+      <Modal
+        title="Edit"
+        visible={modalVisible}
+        onOk={handleOk}
+        onCancel={handleCancel}
+        destroyOnClose={true}
+        confirmLoading={confirmLoading}
+      >
+        <label className={styles.label}>标签名：</label>
+        <Input type="text" value={editValue} onChange={e => setEditValue(e.target.value)} />
+      </Modal>
     </div>
   )
 }
