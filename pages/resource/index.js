@@ -7,8 +7,6 @@ import {$http, updateToken} from "../../http";
 import Tag from "../../components/Tag";
 import {LoadingOutlined} from '@ant-design/icons';
 
-const USERID = '627dd3a6e4591fd54c1a4888'
-
 function addZero(number) {
   if (number < 10) {
     return `0${number}`;
@@ -44,11 +42,7 @@ export default function Resource() {
   const fileInputRef = useRef(null);
 
   const fetchTag1 = () => {
-    const payload = {
-      conds: {
-        user: USERID
-      }
-    }
+    const payload = {conds: {}}
     $http.post('label/search', payload).then(res => {
       const result = res?.result.filter(item => item?.parent === undefined)
       setTagList1(result || [])
@@ -56,7 +50,7 @@ export default function Resource() {
   }
 
   useEffect(() => {
-    $http.post('user/signin', {name: 'Lester'}).then(res => {
+    $http.post('user/signin', {name: 'admin'}).then(res => {
       if (res?.token) {
         setToken(res.token)
       }
@@ -84,7 +78,6 @@ export default function Resource() {
     setLoading1(true)
     $http.post('label/create', {
       name: value1,
-      user: USERID
     }).then(() => {
       fetchTag1()
       setValue1('')
@@ -97,7 +90,6 @@ export default function Resource() {
     setLoading2(true)
     $http.post('label/create', {
       name: value2,
-      user: USERID,
       parent: activeTag1
     }).then(() => {
       fetchTag1()
@@ -159,9 +151,8 @@ export default function Resource() {
     const formdata = new FormData();
     formdata.append('', file, token);
     await uploadAudio(uploadLink, formdata);
-    const res = await $http.post('asset/create', {
+    await $http.post('asset/create', {
       token,
-      user: USERID,
       name: fileName,
       label: activeTag2
     })
@@ -172,7 +163,6 @@ export default function Resource() {
   const fetchResourceList = () => {
     $http.post('asset/search', {
       conds: {
-        user: USERID,
         label: activeTag2
       },
       page: 1,
